@@ -1,38 +1,57 @@
 from flask import Flask, render_template, request
-from model import preprocess, predict
 import os
-from werkzeug.utils import secure_filename
+import shutil
+import uuid
+from common.ai import preprocess, predict
+from common.utils import getListDir
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='public')
 
-# Configure upload folder
-UPLOAD_FOLDER = 'static/images'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+@app.template_filter('twodecimals')
+def twodecimals(value):
+    return "{:.2f}".format(value)
 
-# Function to check allowed file extensions
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+@app.route('/album-list')
+def album_list():
+    listDir = getListDir('public')
+    albums = []
 
-@app.route("/")
-def Home():
+    for d in listDir:
+        obj = {}
+        obj['title'] = d.replace('_', ' ').title()
+        obj['link'] = d
+        albums.append(obj)
+
+    return render_template('list.jinja', album=albums)
+
+@app.route('/album/<album>')
+def album(album):
+    listDir = getListDir(f'public/{album}')
+    return render_template('galery.jinja', gallery=listDir, path=album)
+
+@app.route('/')
+def form():
     return render_template('form.jinja')
 
 @app.route('/', methods=['POST'])
 def submit():
-    image = request.files.get('images')
-    if image and allowed_file(image.filename):
-        filename = secure_filename(image.filename)  # Secure the filename
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        image.save(file_path)  # Save the image file to the static/images folder
+    for file in request.files.getlist('images'):
+        if file.content_type.startswith('image/'):
+            fileName = file.filename.split('.')
+            img = str(uuid.uuid4()) + '.' + fileName[len(fileName) - 1]
+            file.save(os.path.join('img', img))
 
-        res = predict(preprocess(image), file_path) 
+    listDir = getListDir('img')
+
+    res = predict(preprocess(listDir), listDir)
+
+    for r in res:
+        path = os.path.join('public', r["Predicted"])
+        if not os.path.exists(path):
+            os.mkdir(path)
+        shutil.move(r["Image"], path)
     
-        return render_template('result.jinja', result=res)
-    return "Invalid file type", 400
+    return render_template('result.jinja', result=res)
 
 if __name__ == '__main__':
-    # Ensure the upload folder exists
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
     app.run(debug=True)
