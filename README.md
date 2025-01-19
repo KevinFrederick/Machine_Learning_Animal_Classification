@@ -12,3 +12,17 @@
 9. Program dapat Diakses pada [localhost:5000](http://localhost:5000)
     ![Image](ReadMe_Images/Home_Screen.jpeg)
 11. Untuk Menghentikan Program dapat Dilakukan dengan Mengetikkan "*ctrl + c*" pada Command Prompt
+
+## Hewan yang Dapat Diprediksi
+1. Butterfly
+2. Cat
+3. Cow
+4. Dog
+5. Elephant
+6. Hen
+7. Horse
+8. Monkey
+9. Panda
+10. Sheep
+11. Spider
+12. Squirrel
